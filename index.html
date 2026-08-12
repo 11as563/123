@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>剧本杀·祝福｜中式微恐7人本</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:"SimSun",serif;}
+body{background:#1c1712;color:#e6d9c3;background-image:repeating-linear-gradient(0deg,rgba(70,55,30,0.2),rgba(70,55,30,0.2) 1px,transparent 1px,transparent 3px);min-height:100vh;padding:12px;}
+.container{max-width:1100px;margin:0 auto;background:rgba(28,22,16,0.85);border:2px solid #6b4f2f;padding:16px;border-radius:6px;box-shadow:0 0 25px #22180c;}
+h1,h2,h3{color:#d4b886;margin:12px 0;}
+.panel{background:#2b2219;border:1px solid #5c442c;padding:14px;margin:10px 0;border-radius:4px;}
+input,button,select{background:#382d20;color:#f0e2c8;border:1px solid #805f38;padding:9px 11px;border-radius:3px;font-size:15px;margin:4px;}
+button:hover{background:#4d3c29;cursor:pointer;}
+button.danger{border-color:#992222;color:#ffbcbc;}
+.tab-bar{display:flex;flex-wrap:wrap;gap:4px;margin:8px 0;}
+.tab{padding:8px 12px;border:1px solid #604830;background:#2c231a;user-select:none;}
+.tab.active{background:#523e28;border-color:#b88b58;}
+.hide{display:none !important;}
+.chat-box{height:240px;overflow-y:auto;background:#201a13;padding:10px;border:1px solid #4b3824;}
+.msg{margin:4px 0;padding:4px;border-bottom:#3a2e20 1px solid;}
+.self{color:#ffdd99;}
+.other{color:#c9b89c;}
+.dm-text{color:#dd7766;font-weight:bold;}
+.clue-item{border:1px solid #4c3824;padding:8px;margin:6px 0;background:#271f16;}
+.secret{color:#ff7c7c;}
+.jump-scare{position:fixed;inset:0;background:#000;z-index:9999;display:none;align-items:center;justify-content:center;}
+.vote-item{margin:6px;padding:6px;border:1px solid #443322;}
+small{color:#948266;}
+.tab-content{display:none;}
+.tab-content.show{display:block;}
+@media(max-width:640px){.tab-bar{font-size:13px;}.chat-box{height:180px;}}
+</style>
+</head>
+<body>
+<div class="container">
+<h1>📜 剧本杀《祝福》｜中式微恐 7人本</h1>
+
+<div id="page-home" class="panel">
+<h2>🏠 首页大厅</h2>
+<p>游玩人数：7人（可反串）｜时长：90‑120分钟｜全自动AI主持</p>
+<div>
+<h3>创建房间（房主）</h3>
+<input placeholder="输入你的昵称" id="hostName">
+<button onclick="createRoom()">创建房间</button>
+</div>
+<hr style="margin:12px 0;border-color:#443322;">
+<div>
+<h3>加入已有房间</h3>
+<input placeholder="你的昵称" id="joinName">
+<input placeholder="6位房间号" id="roomIdInput">
+<button onclick="joinRoom()">加入房间</button>
+</div>
+<hr style="margin:12px 0;border-color:#443322;">
+<div>
+<h3>单机浏览模式</h3>
+<button onclick="singleMode()">单人浏览全部剧本线索</button>
+</div>
+<p><small>⚠提示：本地双击html无法跨设备联机；远程联机需要部署到Github‑Pages网页链接。</small></p>
+</div>
+
+<div id="page-room" class="hide">
+<div class="panel">
+<h2>🏮 荒村祠堂 · 房间大厅</h2>
+<p>房间号：<span id="ridShow"></span> <button onclick="copyRoom()">复制房间号</button></p>
+<h3>在线玩家列表</h3>
+<div id="playerListBox"></div>
+<p id="roomTip"></p>
+<button id="btnStartGame" onclick="startGame()">房主：开始游戏</button>
+</div>
+</div>
+
+<div id="page-game" class="hide">
+<div class="panel dm-text" id="dmBroadcast">【AI‑DM】等待游戏启动</div>
+<div class="tab-bar">
+<div class="tab active" onclick="switchTab('script')">📜我的剧本</div>
+<div class="tab" onclick="switchTab('clue')">🔍线索</div>
+<div class="tab" onclick="switchTab('publicChat')">💬公聊</div>
+<div class="tab" onclick="switchTab('privateChat')">👤私聊</div>
+<div class="tab" onclick="switchTab('voteTab')">⚖投票</div>
+</div>
+
+<div id="tab-script" class="panel tab-content show">
+<h3>你的角色剧本</h3>
+<div id="myScriptBox"></div>
+</div>
+
+<div id="tab-clue" class="panel tab-content">
+<h3>线索库</h3>
+<div id="clueBox"></div>
+</div>
+
+<div id="tab-publicChat" class="panel tab-content">
+<h3>公聊频道（全部人可见）</h3>
+<div class="chat-box" id="pubChatBox"></div>
+<div>
+<input placeholder="输入发言" id="pubInput">
+<button onclick="sendPublicChat()">发送</button>
+</div>
+</div>
+
+<div id="tab-privateChat" class="panel tab-content">
+<h3>私聊频道（第三幕解锁）</h3>
+<small>仅你与选中玩家可见</small>
+<div><select id="privateTarget"></select></div>
+<div class="chat-box" id="priChatBox"></div>
+<div>
+<input placeholder="私聊消息" id="priInput">
+<button onclick="sendPrivateChat()">发送私聊</button>
+</div>
+</div>
+
+<div id="tab-voteTab" class="panel tab-content">
+<h3>匿名投票（第四幕开启）</h3>
+<div id="voteBox"></div>
+</div>
+
+<div class="panel">
+<h3>游戏阶段控制（房主）</h3>
+<p>当前幕：<span id="phaseShow"></span></p>
+<button onclick="nextPhase()">下一幕 →</button>
+<button class="danger" onclick="triggerJump()">恐怖惊吓测试</button>
+</div>
+
+<div id="endingPanel" class="hide panel">
+<h2>🎭结局与完整复盘</h2>
+<div id="endingContent"></div>
+</div>
+</div>
+</div>
+
+<div class="jump-scare" id="jumpLayer">
+<div style="font-size:120px;color:#900;">👁</div>
+</div>
+
+<script>
+// 角色库 4男3女 祝福7人本
+const roleList = [
+{id:"yangxl",name:"杨小兰",gender:"女",bg:"你是外来到此地的年轻女子，来荒村寻亲，心底埋藏一段悲痛往事。",secret:"你多年前失去至亲，来此地寻找当年真相，你刻意隐瞒自己来过此地。"},
+{id:"xiuying",name:"秀英",gender:"女",bg:"土生土长本村妇人，待人温和，经常给村里人帮忙，看似和善。",secret:"你见证过祠堂的旧事，为了自保选择沉默，手上沾染隐秘罪孽。"},
+{id:"huifang",name:"慧芳",gender:"女",bg:"村里的绣娘，常年闭门在家，性格敏感胆小。",secret:"你听见许多夜晚祠堂的异响，掌握部分死者生前秘密，害怕被报复。"},
+{id:"zhihua",name:"志华",gender:"男",bg:"村里教书先生，读过书，理性冷静，受人尊敬。",secret:"你知道荒村古老禁忌，试图掩盖家族丑闻。"},
+{id:"alin",name:"阿林",gender:"男",bg:"壮年农夫，性子急躁冲动，家里遭遇过变故。",secret:"曾经和死者爆发激烈冲突，当晚你去过祠堂。"},
+{id:"azhe",name:"阿哲",gender:"男",bg:"外来游商，走南闯北，偶然留宿荒村。",secret:"你并不是普通商人，你在追查一桩多年失踪案。"},
+{id:"agui",name:"阿贵",gender:"男",bg:"村里守山人猎户，沉默寡言，常年徘徊山林与祠堂周边。",secret:"你守着荒村最大的秘密，所有往事你全部看在眼里。"}
+];
+
+// 线索库
+const allClues = {
+m1:[
+{title:"祠堂地上的旧符咒",content:"泛黄残破，上面沾染褐色干涸污渍。",lock:false},
+{title:"死者房间破碎的绣帕",content:"绣着本地独有的祝福纹样。",lock:false}
+],
+m2:[
+{title:"深夜祠堂脚步声记录",content:"多位村民证词，子时总能听见祠堂内走动声。",lock:true},
+{title:"守山人阿贵的狩猎刀",content:"刀身缝隙残留不明褐色痕迹。",lock:true}
+],
+m3:[
+{title:"多年前的无名遗书",content:"记载荒村用‘祝福’之名掩盖的残酷旧俗。",lock:true}
+]
+};
+
+// 阶段定义
+const phases = [
+{name:"第一幕｜荒村来客",dm:"【AI‑DM】浓雾笼罩青石荒村，祠堂大门吱呀推开，各位，请阅读你的个人剧本，完成自我介绍破冰。"},
+{name:"第二幕｜祠堂凶案",dm:"【AI‑DM】清晨，祠堂之中发现一具尸体，现在开启公共搜证，请查看公开线索，自由公聊讨论案情。"},
+{name:"第三幕｜暗流私语",dm:"【AI‑DM】夜幕降临，允许玩家一对一私聊，部分隐藏线索解锁，小心他人的谎言。"},
+{name:"第四幕｜最终审判",dm:"【AI‑DM】真相即将落定，请所有人匿名投出你心中的嫌疑人，投票结束触发结局。"},
+{name:"复盘结束",dm:"【AI‑DM】一切尘埃落定，接下来为各位公布完整真相复盘。"}
+];
+
+let gameState = {
+roomId:"",
+myName:"",
+myRole:null,
+phase:0,
+players:[],
+pubChat:[],
+priChat:{},
+votes:[],
+unlockClue:[]
+};
+
+// tab切换
+function switchTab(tabName){
+document.querySelectorAll('.tab-content').forEach(el=>el.classList.remove('show'));
+document.getElementById('tab-'+tabName).classList.add('show');
+document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+event.target.classList.add('active');
+}
+
+// 惊吓效果
+function triggerJump(){
+const lay = document.getElementById('jumpLayer');
+lay.style.display='flex';
+setTimeout(()=>{lay.style.display='none'},650);
+}
+
+// 生成6位房间号
+function genRoomId(){
+return String(Math.floor(Math.random()*900000+100000));
+}
+
+// 创建房间
+function createRoom(){
+const n = document.getElementById('hostName').value.trim();
+if(!n){alert("请输入昵称");return;}
+const rid = genRoomId();
+gameState.roomId = rid;
+gameState.myName = n;
+gameState.players = [{name:n,role:null,isHost:true}];
+document.getElementById('ridShow').innerText = rid;
+saveLocalRoom();
+renderRoomPage();
+document.getElementById('page-home').classList.add('hide');
+document.getElementById('page-room').classList.remove('hide');
+}
+
+// 加入房间
+function joinRoom(){
+const n = document.getElementById('joinName').value.trim();
+const rid = document.getElementById('roomIdInput').value.trim();
+if(!n||!rid){alert("填写昵称和6位房间号");return;}
+gameState.roomId = rid;
+gameState.myName = n;
+let cache = getRoomLocal(rid);
+if(!cache){
+cache = {players:[{name:n,role:null,isHost:false}],phase:0,pubChat:[],priChat:{}};
+} else {
+cache.players.push({name:n,role:null,isHost:false});
+}
+gameState.players = cache.players;
+gameState.pubChat = cache.pubChat||[];
+gameState.priChat = cache.priChat||{};
+document.getElementById('ridShow').innerText = rid;
+saveLocalRoom();
+renderRoomPage();
+document.getElementById('page-home').classList.add('hide');
+document.getElementById('page-room').classList.remove('hide');
+}
+
+function copyRoom(){
+navigator.clipboard.writeText(gameState.roomId);
+alert("房间号已复制");
+}
+
+function saveLocalRoom(){
+let store = JSON.parse(localStorage.getItem('zb_rooms')||'{}');
+store[gameState.roomId] = JSON.parse(JSON.stringify(gameState));
+localStorage.setItem('zb_rooms',JSON.stringify(store));
+}
+
+function getRoomLocal(rid){
+let store = JSON.parse(localStorage.getItem('zb_rooms')||'{}');
+return store[rid]||null;
+}
+
+function renderRoomPage(){
+const box = document.getElementById('playerListBox');
+box.innerHTML = "";
+gameState.players.forEach(p=>{
+box.innerHTML += `<div class="panel">${p.name} ${p.isHost?"(房主)":""} ${p.role?"｜角色："+p.role.name:"｜未分配角色"}</div>`;
+});
+document.getElementById('roomTip').innerText = `当前${gameState.players.length}/7人，凑齐7人房主点开始游戏`;
+}
+
+// 开始游戏，随机分配角色
+function startGame(){
+if(gameState.players.length<7){alert("需要7名玩家");return;}
+let shuffle = [...roleList].sort(()=>Math.random()-0.5);
+gameState.players.forEach((pl,idx)=>{
+pl.role = shuffle[idx];
+if(pl.name === gameState.myName){
+gameState.myRole = shuffle[idx];
+}
+});
+gameState.phase = 0;
+saveLocalRoom();
+renderGamePage();
+document.getElementById('page-room').classList.add('hide');
+document.getElementById('page-game').classList.remove('hide');
+}
+
+// 单人模式
+function singleMode(){
+gameState.myRole = roleList[0];
+gameState.phase =0;
+renderGamePage();
+document.getElementById('page-home').classList.add('hide');
+document.getElementById('page-game').classList.remove('hide');
+}
+
+function renderGamePage(){
+const dm = phases[gameState.phase];
+document.getElementById('dmBroadcast').innerText = dm.dm;
+document.getElementById('phaseShow').innerText = dm.name;
+//渲染剧本
+document.getElementById('myScriptBox').innerHTML = `
+<h3>👤角色：${gameState.myRole.name}【${gameState.myRole.gender}】</h3>
+<p>${gameState.myRole.bg}</p>
+<br>
+<p class="secret">⚠你的个人秘密（务必隐瞒）：${gameState.myRole.secret}</p>
+`;
+renderClues();
+renderChat();
+renderVote();
+}
+
+function renderClues(){
+let html = "";
+if(gameState.phase>=0){
+allClues.m1.forEach(c=>{
+html += `<div class="clue-item"><b>${c.title}</b><p>${c.content}</p></div>`;
+});
+}
+if(gameState.phase>=2){
+allClues.m2.forEach(c=>{
+html += `<div class="clue-item"><b>${c.title}</b><p>${c.content}</p></div>`;
+});
+}
+if(gameState.phase>=3){
+allClues.m3.forEach(c=>{
+html += `<div class="clue-item"><b>${c.title}</b><p>${c.content}</p></div>`;
+});
+}
+document.getElementById('clueBox').innerHTML = html||"<p>本幕暂未解锁线索</p>";
+}
+
+function renderChat(){
+let pubHtml = "";
+gameState.pubChat.forEach(m=>{
+pubHtml += `<div class="msg"><b>${m.from}：</b>${m.text}</div>`;
+});
+document.getElementById('pubChatBox').innerHTML = pubHtml;
+document.getElementById('pubChatBox').scrollTop = document.getElementById('pubChatBox').scrollHeight;
+}
+
+function sendPublicChat(){
+const txt = document.getElementById('pubInput').value.trim();
+if(!txt)return;
+gameState.pubChat.push({from:gameState.myName,text:txt});
+document.getElementById('pubInput').value="";
+saveLocalRoom();
+renderChat();
+}
+
+function sendPrivateChat(){
+const target = document.getElementById('privateTarget').value;
+const txt = document.getElementById('priInput').value.trim();
+if(!target||!txt)return;
+let key = [gameState.myName,target].sort().join("_");
+if(!gameState.priChat[key]) gameState.priChat[key]=[];
+gameState.priChat[key].push({from:gameState.myName,to:target,text:txt});
+document.getElementById('priInput').value="";
+saveLocalRoom();
+alert("私聊已发送");
+}
+
+function renderVote(){
+let vBox = document.getElementById('voteBox');
+if(gameState.phase <3){
+vBox.innerHTML="<p>第四幕才开放投票</p>";return;
+}
+let opt = "";
+roleList.forEach(r=>opt+=`<option value="${r.id}">${r.name}</option>`);
+vBox.innerHTML = `
+<p>请匿名投出你怀疑的凶手：</p>
+<select id="voteSel">${opt}</select>
+<button onclick="submitVote()">提交投票，提交不可更改</button>
+`;
+}
+
+function submitVote(){
+const sel = document.getElementById('voteSel').value;
+gameState.votes.push({who:gameState.myName,vote:sel});
+saveLocalRoom();
+alert("你的匿名投票完成！等待所有人投票结束");
+checkEnding();
+}
+
+function checkEnding(){
+if(gameState.votes.length >=7){
+showEnding();
+}
+}
+
+function showEnding(){
+document.getElementById('endingPanel').classList.remove('hide');
+document.getElementById('endingContent').innerHTML = `
+<h3>🔴结局触发｜祝福的真相</h3>
+<p>这座荒村，世代以“祝福”为名，行献祭活人旧俗。
+多年前一桩悲剧埋下祸根，祠堂的死者，是旧俗的知情者。
+在场七个人，每一位都有谎言与罪，没有完全清白之人。
+</p>
+<h3>📖完整复盘</h3>
+<p>守山人阿贵目睹全部罪恶却选择沉默；杨小兰寻亲，要揭开往事；秀英为自保参与掩盖；慧芳听见夜晚祠堂秘密；志华维护家族脸面；阿林当晚去过祠堂；游商阿哲专门过来调查失踪案。
+所谓的“祝福”，是裹着善意外壳的吃人往事。浓雾不散，荒村的诅咒依旧缠绕所有人。</p>
+<p style="color:#ff9494;">游戏结束，感谢游玩剧本杀《祝福》</p>
+`;
+}
+
+function nextPhase(){
+if(gameState.phase < phases.length-1){
+gameState.phase +=1;
+saveLocalRoom();
+renderGamePage();
+if(gameState.phase ===2) triggerJump();
+}
+}
+</script>
+</body>
+</html>
